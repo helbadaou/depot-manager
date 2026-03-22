@@ -1,0 +1,201 @@
+:root {
+  --bg: #f6f7fb;
+  --card: #ffffff;
+  --text: #1f1f1f;
+  --muted: #6b7280;
+  --primary: #2563eb;
+  --border: #e5e7eb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  width: min(720px, 100%);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+}
+
+h1 {
+  margin: 0 0 16px;
+}
+
+.form,
+.form-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.form-inline {
+  flex-direction: row;
+  align-items: center;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+}
+
+input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+button {
+  padding: 10px 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error {
+  color: #b91c1c;
+  margin: 0;
+}
+
+.status {
+  margin: 8px 0;
+  color: var(--muted);
+}
+
+.list {
+  margin: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: 13px;
+  display: block;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.total {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.facture {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fdfefe;
+}
+
+ul {
+  padding-left: 16px;
+  margin: 8px 0;
+}
+
+.print-area {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  background: white;
+  color: black;
+  padding: 16px;
+}
+
+.ticket {
+  width: 320px;
+  font-size: 14px;
+}
+
+.ticket-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+
+.ticket-table th,
+.ticket-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+}
+
+.ticket-table tfoot td {
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .form-inline {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  button {
+    width: 100%;
+  }
+}
+
+@media print {
+  :root {
+    --bg: #ffffff;
+  }
+
+  body, .page, .card {
+    background: white;
+    box-shadow: none;
+  }
+
+  .page, .card, .list, .row, .facture {
+    border: none;
+    box-shadow: none;
+  }
+
+  .page > *:not(.print-area) {
+    display: none !important;
+  }
+
+  .print-area {
+    position: static;
+    top: 0;
+    left: 0;
+    padding: 0;
+    width: 100%;
+  }
+}
