@@ -1,85 +1,171 @@
-import { FormEvent, useMemo, useState } from 'react';
-import { apiFetch, ApiError } from '../lib/api';
-import { getRole, getToken } from '../lib/auth';
-
-type Product = {
-  id: number;
-  name: string;
-  price: number;
-  barcode: string;
-};
-
-type Facture = {
-  id: number;
-  products: Product[];
-  total: number;
-  created_at: string;
-};
+import Head from 'next/head';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/router';
+import AppShell from '../components/AppShell';
+import { ApiError, apiFetch } from '../lib/api';
+import { clearSession, getRole, getToken } from '../lib/auth';
+import { formatCurrency } from '../lib/format';
+import { Facture, Notice } from '../lib/types';
 
 export default function FacturePage() {
-  const [barcodes, setBarcodes] = useState<string>('');
-  const [status, setStatus] = useState<string | null>(null);
+  const router = useRouter();
+  const [barcodes, setBarcodes] = useState('');
+  const [notice, setNotice] = useState<Notice | null>(null);
   const [sending, setSending] = useState(false);
-  const token = getToken();
-  const role = getRole();
 
   const parsedBarcodes = useMemo(
     () =>
       barcodes
         .split(/\n|,|;/)
-        .map((b) => b.trim())
+        .map((barcode) => barcode.trim())
         .filter(Boolean),
     [barcodes]
   );
 
+  const uniqueCount = useMemo(() => new Set(parsedBarcodes).size, [parsedBarcodes]);
+
+  useEffect(() => {
+    const role = getRole();
+    const token = getToken();
+
+    if (role !== 'sales' || !token) {
+      clearSession();
+      router.replace('/');
+    }
+  }, [router]);
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
+
+    const token = getToken();
+    const role = getRole();
+
     if (!token || role !== 'sales') {
-      setStatus('Sales login required');
+      clearSession();
+      router.replace('/');
       return;
     }
+
     if (parsedBarcodes.length === 0) {
-      setStatus('Add at least one barcode');
+      setNotice({ tone: 'error', text: 'Add at least one barcode.' });
       return;
     }
+
     setSending(true);
-    setStatus(null);
+    setNotice(null);
+
     try {
       const facture = await apiFetch<Facture>('/factures', {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: JSON.stringify({ barcodes: parsedBarcodes }),
       });
-      setStatus(`Facture #${facture.id} created, total $${facture.total.toFixed(2)}`);
+
+      setNotice({
+        tone: 'success',
+        text: `Facture #${facture.id} created for ${formatCurrency(facture.total)}.`,
+      });
       setBarcodes('');
-    } catch (err: any) {
-      const apiErr = err as ApiError;
-      setStatus(apiErr.message || 'Failed to create facture');
+    } catch (error) {
+      const apiError = error as ApiError;
+      setNotice({ tone: 'error', text: apiError.message || 'Failed to create facture.' });
     } finally {
       setSending(false);
     }
   };
 
+  const metrics = [
+    {
+      label: 'Parsed entries',
+      value: parsedBarcodes.length.toString(),
+      detail: 'Every separator creates a new line item input.',
+    },
+    {
+      label: 'Unique codes',
+      value: uniqueCount.toString(),
+      detail: 'Useful when the same barcode appears multiple times.',
+    },
+    {
+      label: 'Duplicate scans',
+      value: String(parsedBarcodes.length - uniqueCount),
+      detail: 'Repeated codes are preserved and counted in the final facture.',
+    },
+  ];
+
   return (
-    <div className="page">
-      <div className="card">
-        <h1>Create Facture</h1>
-        <form onSubmit={submit} className="form">
-          <label>
-            Barcodes (comma, semicolon or newline separated)
-            <textarea
-              value={barcodes}
-              onChange={(e) => setBarcodes(e.target.value)}
-              rows={4}
-              style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid #e5e7eb' }}
-            />
-          </label>
-          <button type="submit" disabled={sending}>
-            {sending ? 'Creating...' : 'Create facture'}
-          </button>
-        </form>
-        {status && <p className="status">{status}</p>}
-      </div>
-    </div>
+    <>
+      <Head>
+        <title>Batch Facture | Depot Manager</title>
+      </Head>
+
+      <AppShell
+        title="Batch Facture Builder"
+        eyebrow="Sales workspace"
+        description="Paste large barcode batches in one pass. The parser keeps duplicates, so bulk imports stay aligned with real stock movement."
+        role="sales"
+        navItems={[
+          { href: '/sales', label: 'Checkout' },
+          { href: '/products', label: 'Products' },
+          { href: '/facture', label: 'Batch Facture' },
+        ]}
+        metrics={metrics}
+      >
+        <section className="content-grid content-grid--split">
+          <article className="surface">
+            <div className="surface-header">
+              <div>
+                <span className="eyebrow">Bulk entry</span>
+                <h2>Paste barcode lines</h2>
+              </div>
+            </div>
+
+            <form onSubmit={submit} className="form stack">
+              <label>
+                Barcodes
+                <textarea
+                  value={barcodes}
+                  onChange={(e) => setBarcodes(e.target.value)}
+                  rows={10}
+                  placeholder={`6291041500214\n6291041500214\n8901234567890`}
+                />
+              </label>
+
+              <p className="field-note">Use commas, semicolons, or new lines. Repeated barcodes stay repeated in the final facture.</p>
+
+              {notice && <div className={`alert ${notice.tone}`}>{notice.text}</div>}
+
+              <button type="submit" className="button" disabled={sending}>
+                {sending ? 'Creating facture...' : 'Create facture'}
+              </button>
+            </form>
+          </article>
+
+          <article className="surface">
+            <div className="surface-header">
+              <div>
+                <span className="eyebrow">Preview</span>
+                <h2>Parsed barcodes</h2>
+              </div>
+              <span className="status-pill neutral">{parsedBarcodes.length} entries</span>
+            </div>
+
+            {parsedBarcodes.length === 0 ? (
+              <div className="empty-state">
+                <strong>No barcodes parsed</strong>
+                <span>Paste barcode data to preview exactly what will be submitted.</span>
+              </div>
+            ) : (
+              <div className="barcode-list">
+                {parsedBarcodes.map((code, index) => (
+                  <span key={`${code}-${index}`} className="barcode-chip">
+                    {code}
+                  </span>
+                ))}
+              </div>
+            )}
+          </article>
+        </section>
+      </AppShell>
+    </>
   );
 }

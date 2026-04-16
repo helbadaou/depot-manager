@@ -1,0 +1,7 @@
+pos.db
+*.db
+*.sqlite
+bin
+tmp
+.git
+.gitignore

@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"log"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -11,7 +12,10 @@ import (
 )
 
 func main() {
-	db, err := sql.Open("sqlite3", "./pos.db?_foreign_keys=on")
+	dbPath := envOrDefault("DB_PATH", "./pos.db")
+	port := envOrDefault("PORT", "8080")
+
+	db, err := sql.Open("sqlite3", dbPath+"?_foreign_keys=on")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -28,5 +32,14 @@ func main() {
 
 	router := routes.NewRouter(authSvc, productSvc, factureSvc, realtimeSvc)
 
-	log.Fatal(router.Run(":8080"))
+	log.Fatal(router.Run(":" + port))
+}
+
+func envOrDefault(key, fallback string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		return fallback
+	}
+
+	return value
 }

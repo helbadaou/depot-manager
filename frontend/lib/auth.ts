@@ -1,6 +1,8 @@
+export type UserRole = 'manager' | 'sales';
+
 export type LoginResponse = {
   username: string;
-  role: string;
+  role: UserRole;
   token: string;
 };
 
@@ -18,9 +20,10 @@ export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY);
 }
 
-export function getRole(): string | null {
+export function getRole(): UserRole | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(ROLE_KEY);
+  const role = localStorage.getItem(ROLE_KEY);
+  return role === 'manager' || role === 'sales' ? role : null;
 }
 
 export function clearSession() {

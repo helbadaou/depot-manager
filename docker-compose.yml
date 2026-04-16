@@ -1,0 +1,29 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: depot-manager-backend
+    environment:
+      PORT: "8080"
+      DB_PATH: "/data/pos.db"
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend_data:/data
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE: "http://localhost:8080"
+        NEXT_PUBLIC_WS_BASE: "ws://localhost:8080"
+    container_name: depot-manager-frontend
+    depends_on:
+      - backend
+    environment:
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+
+volumes:
+  backend_data:
